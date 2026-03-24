@@ -115,6 +115,28 @@ git -C ~/.claude/skills/code-analyzer pull
 
 ---
 
+## Uninstall
+
+```bash
+# Remove from all agents
+npx skills remove code-analyzer --all
+
+# Remove from a specific agent
+npx skills remove code-analyzer --agent claude-code
+npx skills remove code-analyzer --agent codex
+```
+
+Or manually by deleting the folder:
+
+```bash
+rm -rf ~/.claude/skills/code-analyzer    # Claude Code
+rm -rf ~/.codex/skills/code-analyzer     # Codex
+rm -rf ~/.cursor/skills/code-analyzer    # Cursor
+rm -rf ~/.windsurf/skills/code-analyzer  # Windsurf
+```
+
+---
+
 ## Usage
 
 **Explicit invocation** (type `$` followed by the skill name):
