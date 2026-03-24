@@ -2,11 +2,11 @@
 name: code-analyzer
 version: 1.5.0
 description: Deeply analyzes any source file or code snippet. Use this skill when the user wants to understand what a piece of code does, wants an explanation of functions/classes, wants to know which libraries are used and what they do, or wants to verify code correctness by searching online. Also activate when the user says "explain this code", "analyze this file", "what does this function do", "what libraries does it use", "is this code correct".
-author: ""
-email: ""
-repository: ""
+author: "Aldo Forte"
+email: "dev@aldoforte.it"
+repository: "https://github.com/Aldo-Forte/skills"
 license: MIT
-created: ""
+created: "2026-03-24"
 updated: ""
 ---
 

@@ -83,7 +83,12 @@ Supported agent names: `claude-code`, `codex`, `opencode`, `cursor`, `windsurf`,
 ### Method 2 — npx skills CLI
 
 ```bash
-npx skills add Aldo-Forte/code-analyzer --all
+# Install code-analyzer on all detected agents
+npx skills add Aldo-Forte/skills --skill code-analyzer --all
+
+# Install on a specific agent only
+npx skills add Aldo-Forte/skills --skill code-analyzer --agent claude-code
+npx skills add Aldo-Forte/skills --skill code-analyzer --agent codex
 ```
 
 ### Method 3 — Manual git clone
