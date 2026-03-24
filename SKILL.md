@@ -4,7 +4,7 @@ version: 1.5.0
 description: Analizza in profondità qualsiasi file o snippet di codice. Usare questa skill quando l'utente vuole capire cosa fa un pezzo di codice, vuole una spiegazione delle funzioni/classi, vuole sapere quali librerie vengono usate e cosa fanno, oppure vuole verificare la correttezza del codice cercando su internet. Attivare anche se l'utente dice "spiegami questo codice", "analizza questo file", "cosa fa questa funzione", "che librerie usa", "è corretto questo codice".
 author: "Aldo Forte"
 email: "dev@aldoforte.it"
-repository: ""
+repository: "https://github.com/Aldo-Forte/code-analyzer"
 license: MIT
 ---
 
