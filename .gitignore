@@ -1,0 +1,9 @@
+# code-analyzer report output
+code-analyzer/*-Report/
+code-analyzer/*-Report-*/
+
+# OS files
+.DS_Store
+
+# IDE
+.idea/
