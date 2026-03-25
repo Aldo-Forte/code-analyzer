@@ -23,10 +23,23 @@ portable_realpath() {
   if [ -d "$target" ]; then
     (cd "$target" && pwd -P)
   elif [ -e "$target" ]; then
+    local current="$target"
     local dir base
-    dir="$(dirname "$target")"
-    base="$(basename "$target")"
-    echo "$(cd "$dir" && pwd -P)/$base"
+    dir="$(cd "$(dirname "$current")" && pwd -P)"
+    base="$(basename "$current")"
+    current="$dir/$base"
+    while [ -L "$current" ]; do
+      local link_target
+      link_target="$(readlink "$current")"
+      case "$link_target" in
+        /*) current="$link_target" ;;
+        *)  current="$(dirname "$current")/$link_target" ;;
+      esac
+      dir="$(cd "$(dirname "$current")" && pwd -P)"
+      base="$(basename "$current")"
+      current="$dir/$base"
+    done
+    echo "$current"
   else
     echo "$target"
   fi

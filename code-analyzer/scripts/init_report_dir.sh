@@ -22,15 +22,31 @@ portable_realpath() {
   if readlink -f "$target" 2>/dev/null; then
     return 0
   fi
-  # Manual resolution: cd into each directory component and resolve with pwd -P
-  # pwd -P always returns the physical path (no symlinks) on all POSIX systems
+  # Manual resolution using pwd -P (physical) + readlink to follow symlink chains
+  # pwd -P returns the physical path on all POSIX systems
+  # readlink (without -f) reads one symlink level — available on all platforms
   if [ -d "$target" ]; then
     (cd "$target" && pwd -P)
   elif [ -e "$target" ]; then
+    # Resolve directory, then follow file-level symlink chain
+    local current="$target"
     local dir base
-    dir="$(dirname "$target")"
-    base="$(basename "$target")"
-    echo "$(cd "$dir" && pwd -P)/$base"
+    dir="$(cd "$(dirname "$current")" && pwd -P)"
+    base="$(basename "$current")"
+    current="$dir/$base"
+    while [ -L "$current" ]; do
+      local link_target
+      link_target="$(readlink "$current")"
+      case "$link_target" in
+        /*) current="$link_target" ;;              # absolute symlink
+        *)  current="$(dirname "$current")/$link_target" ;;  # relative symlink
+      esac
+      # Re-resolve directory after following the link
+      dir="$(cd "$(dirname "$current")" && pwd -P)"
+      base="$(basename "$current")"
+      current="$dir/$base"
+    done
+    echo "$current"
   else
     echo "$target"
   fi
