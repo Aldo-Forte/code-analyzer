@@ -26,11 +26,13 @@ const path = require('path');
 const projectDirArg = process.argv[2] || '.';
 
 // ── validate PROJECT_DIR ──────────────────────────────────────────────────────
-const projectDir = path.resolve(projectDirArg);
+let projectDir = path.resolve(projectDirArg);
 if (!fs.existsSync(projectDir) || !fs.statSync(projectDir).isDirectory()) {
   process.stderr.write(`❌ Directory not found: ${projectDirArg}\n`);
   process.exit(1);
 }
+// Security: resolve symlinks to canonical path (CWE-22)
+projectDir = fs.realpathSync(projectDir);
 
 // ── generate timestamp YYYY-MM-DDTHH-MM-SS ───────────────────────────────────
 function timestamp() {
@@ -43,18 +45,33 @@ function timestamp() {
 
 // ── create base dir ───────────────────────────────────────────────────────────
 const baseDir = path.join(projectDir, 'code-analyzer');
-fs.mkdirSync(baseDir, { recursive: true });
+fs.mkdirSync(baseDir, { recursive: true, mode: 0o700 });
 
-// ── find unique name with collision counter ───────────────────────────────────
+// ── find unique name with atomic creation (CWE-367 TOCTOU fix) ──────────────
 const ts = timestamp();
 let reportDir = path.join(baseDir, `${ts}-Report`);
-let counter = 1;
-while (fs.existsSync(reportDir)) {
-  reportDir = path.join(baseDir, `${ts}-Report-${counter}`);
-  counter++;
-}
+const MAX_ATTEMPTS = 100;
+let counter = 0;
+let created = false;
 
-fs.mkdirSync(reportDir, { recursive: true });
+while (!created) {
+  try {
+    // mkdir without recursive: fails if already exists → atomic check+create
+    fs.mkdirSync(reportDir, { mode: 0o700 });
+    created = true;
+  } catch (e) {
+    if (e.code === 'EEXIST') {
+      counter++;
+      if (counter >= MAX_ATTEMPTS) {
+        process.stderr.write(`❌ Could not create unique report dir after ${MAX_ATTEMPTS} attempts\n`);
+        process.exit(1);
+      }
+      reportDir = path.join(baseDir, `${ts}-Report-${counter}`);
+    } else {
+      throw e;
+    }
+  }
+}
 
 process.stderr.write(`📁 Report directory created: ${reportDir}\n`);
 

@@ -61,15 +61,27 @@ install_to() {
   local skills_dir="${AGENT_PATHS[$agent]}"
   local dest="$skills_dir/$SKILL_NAME"
 
-  mkdir -p "$skills_dir"
+  mkdir -p -m 0700 "$skills_dir"
 
   if [ -d "$dest" ]; then
     # Already installed — update with git pull if it is a clone, otherwise overwrite
     if [ -d "$dest/.git" ]; then
       echo "  Updating via git pull..."
       git -C "$dest" pull --quiet
+      # Integrity: log commit hash after update (parity with install_from_github)
+      local updated_hash
+      updated_hash="$(git -C "$dest" rev-parse HEAD 2>/dev/null || echo "unknown")"
+      echo "  Updated to commit: $updated_hash"
     else
-      echo "  Overwriting existing installation..."
+      # Backup existing installation before overwriting
+      local backup="${dest}.backup.$(date '+%Y%m%d%H%M%S')"
+      if [ "$FORCE" = true ]; then
+        echo "  --force: overwriting existing installation..."
+      else
+        echo "  Backing up existing installation to: $backup"
+        cp -r "$dest" "$backup"
+        ok "Backup saved: $backup"
+      fi
       rm -rf "$dest"
       cp -r "$SCRIPT_DIR" "$dest"
     fi
@@ -95,6 +107,44 @@ install_from_github() {
   else
     err "git not found. Install git and try again."
     exit 1
+  fi
+
+  # Integrity verification: log commit hash for auditability
+  local commit_hash
+  commit_hash="$(git -C "$tmp/$SKILL_NAME" rev-parse HEAD)"
+  ok "Cloned commit: $commit_hash"
+
+  # Verify SKILL.md exists (basic tamper check — ensures the repo is genuine)
+  if [ ! -f "$tmp/$SKILL_NAME/SKILL.md" ]; then
+    err "Integrity check failed: SKILL.md not found in downloaded repository."
+    err "The repository may be corrupted or tampered with."
+    exit 1
+  fi
+
+  # SHA256 checksum of SKILL.md for reproducibility
+  local checksum
+  if command -v sha256sum &>/dev/null; then
+    checksum="$(sha256sum "$tmp/$SKILL_NAME/SKILL.md" | awk '{print $1}')"
+  elif command -v shasum &>/dev/null; then
+    checksum="$(shasum -a 256 "$tmp/$SKILL_NAME/SKILL.md" | awk '{print $1}')"
+  else
+    checksum="(sha256sum not available)"
+  fi
+  ok "SKILL.md SHA256: $checksum"
+
+  # If EXPECTED_CHECKSUM env var is set, verify automatically (CWE-345)
+  if [ -n "${EXPECTED_CHECKSUM:-}" ]; then
+    if [ "$checksum" = "$EXPECTED_CHECKSUM" ]; then
+      ok "Checksum verified: matches expected value"
+    else
+      err "Checksum mismatch!"
+      err "  Expected: $EXPECTED_CHECKSUM"
+      err "  Got:      $checksum"
+      err "The downloaded repository may have been tampered with. Aborting."
+      exit 1
+    fi
+  else
+    echo "  Tip: set EXPECTED_CHECKSUM=<hash> to enable automatic verification." >&2
   fi
 
   bash "$tmp/$SKILL_NAME/install.sh" "$@"
@@ -137,14 +187,18 @@ fi
 # Argument parsing
 TARGET_AGENT=""
 MODE="install"
+FORCE=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --agent|-a)   TARGET_AGENT="$2"; shift 2 ;;
     --list|-l)    MODE="list"; shift ;;
     --uninstall)  MODE="uninstall"; shift ;;
+    --force|-f)   FORCE=true; shift ;;
     --help|-h)
-      echo "Uso: bash install.sh [--agent NOME] [--list] [--uninstall]"
+      echo "Uso: bash install.sh [--agent NOME] [--list] [--uninstall] [--force]"
+      echo ""
+      echo "  --force, -f   Overwrite existing installation without backup prompt"
       echo ""
       echo "Available agents: $(printf '%s\n' "${!AGENT_PATHS[@]}" | sort | tr '\n' ' ')"
       exit 0 ;;

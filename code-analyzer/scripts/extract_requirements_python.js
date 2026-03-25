@@ -13,8 +13,8 @@
  *   2 = venv not found (non-fatal — caller decides how to proceed)
  *
  * Notes:
- *   - pip warnings are silenced intentionally (stderr ignored).
- *     If the project has warnings, run pip freeze manually to see them.
+ *   - pip warnings are redirected to a log file in the output directory.
+ *     Check pip_warnings.log if requirements seem incomplete.
  *   - On Windows supports Scripts/pip.exe; on Linux/macOS bin/pip.
  *
  * Compatible with Windows, macOS, Linux.
@@ -34,16 +34,25 @@ const projectDirArg = process.argv[2] || '.';
 const reportDirArg  = process.argv[3] || '';
 
 // ── validate PROJECT_DIR ──────────────────────────────────────────────────────
-const projectDir = path.resolve(projectDirArg);
+let projectDir = path.resolve(projectDirArg);
 if (!fs.existsSync(projectDir) || !fs.statSync(projectDir).isDirectory()) {
   err(`❌ Directory not found: ${projectDirArg}`);
   process.exit(1);
 }
+// Security: resolve symlinks to canonical path (CWE-22)
+projectDir = fs.realpathSync(projectDir);
 
 // ── output directory ──────────────────────────────────────────────────────────
-const outputDir  = reportDirArg ? path.resolve(reportDirArg) : path.join(projectDir, 'code-analyzer');
+// Security: resolve reportDir with realpath if it exists, otherwise resolve normally (CWE-22)
+let outputDir;
+if (reportDirArg) {
+  outputDir = path.resolve(reportDirArg);
+  if (fs.existsSync(outputDir)) { outputDir = fs.realpathSync(outputDir); }
+} else {
+  outputDir = path.join(projectDir, 'code-analyzer');
+}
 const outputFile = path.join(outputDir, 'requirements_python.txt');
-fs.mkdirSync(outputDir, { recursive: true });
+fs.mkdirSync(outputDir, { recursive: true, mode: 0o700 });
 
 // ── search for venv ───────────────────────────────────────────────────────────
 info(`🔍 Searching for virtual environment in: ${projectDir}`);
@@ -87,17 +96,44 @@ try {
   }
 }
 
+// Security: resolve symlinks and verify pip is inside the venv (CWE-61)
+try {
+  const realPip  = fs.realpathSync(pipCmd);
+  const realVenv = fs.realpathSync(foundVenv);
+  if (!realPip.startsWith(realVenv + path.sep)) {
+    err(`❌ Security: pip resolves outside the virtual environment`);
+    err(`   pip path: ${pipCmd} → ${realPip}`);
+    err(`   venv path: ${foundVenv} → ${realVenv}`);
+    err(`   This may indicate a symlink attack. Aborting.`);
+    process.exit(1);
+  }
+} catch (e) {
+  err(`❌ Security: cannot resolve pip path: ${e.message}`);
+  process.exit(1);
+}
+
 info(`📦 Extracting installed packages with: ${pipCmd}`);
 
 // ── run pip freeze ────────────────────────────────────────────────────────────
+const pipLogFile = path.join(outputDir, 'pip_warnings.log');
 let freezeOut = '';
 try {
+  const pipLogFd = fs.openSync(pipLogFile, 'w', 0o600);
   freezeOut = execFileSync(pipCmd, ['freeze'], {
-    stdio: ['ignore', 'pipe', 'ignore'],  // stderr silenced intentionally (pip warnings)
+    stdio: ['ignore', 'pipe', pipLogFd],  // stderr redirected to log file
     encoding: 'utf8',
+    timeout: 60000,  // 60s max — prevents indefinite hang (CWE-400)
   });
+  fs.closeSync(pipLogFd);
+  // Remove empty log file if no warnings were produced
+  const logStat = fs.statSync(pipLogFile);
+  if (logStat.size === 0) {
+    fs.unlinkSync(pipLogFile);
+  } else {
+    info(`⚠️  pip produced warnings — see ${pipLogFile}`);
+  }
 } catch (e) {
-  err(`❌ pip freeze failed: ${e.message}`);
+  err(`❌ pip freeze failed: ${e.message} (see ${pipLogFile} for details)`);
   process.exit(1);
 }
 
@@ -106,13 +142,13 @@ const now = new Date();
 const dateStr = now.toISOString().replace('T', ' ').substring(0, 19);
 const header = [
   '# Requirements extracted from virtual environment',
-  `# Project: ${projectDir}`,
-  `# Venv: ${foundVenv}`,
+  `# Project: ${path.basename(projectDir)}`,
+  `# Venv: ${path.basename(foundVenv)}`,
   `# Date: ${dateStr}`,
   '',
 ].join('\n');
 
-fs.writeFileSync(outputFile, header + freezeOut, 'utf8');
+fs.writeFileSync(outputFile, header + freezeOut, { encoding: 'utf8', mode: 0o600 });
 
 // ── count packages (non-comment, non-empty lines) ─────────────────────────────
 const count = freezeOut
