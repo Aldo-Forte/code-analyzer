@@ -32,18 +32,18 @@ const reportDirArg  = process.argv[3] || '';
 // ── validate PROJECT_DIR ──────────────────────────────────────────────────────
 let projectDir = path.resolve(projectDirArg);
 if (!fs.existsSync(projectDir) || !fs.statSync(projectDir).isDirectory()) {
-  err(`❌ Directory not found: ${projectDirArg}`);
+  err(`[ERR] Directory not found: ${projectDirArg}`);
   process.exit(1);
 }
 // Security: resolve symlinks to canonical path (CWE-22)
 projectDir = fs.realpathSync(projectDir);
 
-info(`🔍 Searching for TypeScript/Node project in: ${projectDir}`);
+info(`[INFO] Searching for TypeScript/Node project in: ${projectDir}`);
 
 // ── check package.json (before creating output directory) ────────────────────
 const pkgJsonPath = path.join(projectDir, 'package.json');
 if (!fs.existsSync(pkgJsonPath)) {
-  err(`❌ package.json not found in ${projectDir}`);
+  err(`[ERR] package.json not found in ${projectDir}`);
   err(`   Make sure you are pointing to the root of the Node/TypeScript project.`);
   process.exit(1);
 }
@@ -63,15 +63,15 @@ fs.mkdirSync(outputDir, { recursive: true, mode: 0o700 });
 const pkgMgrLogFile = path.join(outputDir, 'npm_warnings.log');
 let pkgMgrLogFd = fs.openSync(pkgMgrLogFile, 'w', 0o600);
 
-info(`✅ package.json found`);
+info(`[OK] package.json found`);
 
 // ── check node_modules ───────────────────────────────────────────────────────
 const nodeModulesPath = path.join(projectDir, 'node_modules');
 const hasNodeModules  = fs.existsSync(nodeModulesPath) && fs.statSync(nodeModulesPath).isDirectory();
 if (hasNodeModules) {
-  info(`✅ node_modules found`);
+  info(`[OK] node_modules found`);
 } else {
-  info(`⚠️  node_modules not found — dependencies may not be installed`);
+  info(`[WARN] node_modules not found — dependencies may not be installed`);
 }
 
 // ── read package.json ─────────────────────────────────────────────────────────
@@ -81,12 +81,12 @@ let pkg = {};
 try {
   const pkgStat = fs.statSync(pkgJsonPath);
   if (pkgStat.size > MAX_JSON_SIZE) {
-    err(`❌ package.json is too large (${pkgStat.size} bytes, max ${MAX_JSON_SIZE})`);
+    err(`[ERR] package.json is too large (${pkgStat.size} bytes, max ${MAX_JSON_SIZE})`);
     process.exit(1);
   }
   pkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
 } catch (e) {
-  err(`❌ Error reading package.json: ${e.message}`);
+  err(`[ERR] Error reading package.json: ${e.message}`);
   process.exit(1);
 }
 
@@ -198,10 +198,10 @@ try {
   if (logStat.size === 0) {
     fs.unlinkSync(pkgMgrLogFile);
   } else {
-    info(`⚠️  Package manager produced warnings — see ${pkgMgrLogFile}`);
+    info(`[WARN] Package manager produced warnings — see ${pkgMgrLogFile}`);
   }
 } catch { /* log file may not exist */ }
 
 info('');
-info(`✅ Analysis complete: ${countDeps} declared dependencies`);
-info(`📄 File saved to: ${outputFile}`);
+info(`[OK] Analysis complete: ${countDeps} declared dependencies`);
+info(`[INFO] File saved to: ${outputFile}`);

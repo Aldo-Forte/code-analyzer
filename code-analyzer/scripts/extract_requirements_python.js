@@ -36,7 +36,7 @@ const reportDirArg  = process.argv[3] || '';
 // ── validate PROJECT_DIR ──────────────────────────────────────────────────────
 let projectDir = path.resolve(projectDirArg);
 if (!fs.existsSync(projectDir) || !fs.statSync(projectDir).isDirectory()) {
-  err(`❌ Directory not found: ${projectDirArg}`);
+  err(`[ERR] Directory not found: ${projectDirArg}`);
   process.exit(1);
 }
 // Security: resolve symlinks to canonical path (CWE-22)
@@ -55,7 +55,7 @@ const outputFile = path.join(outputDir, 'requirements_python.txt');
 fs.mkdirSync(outputDir, { recursive: true, mode: 0o700 });
 
 // ── search for venv ───────────────────────────────────────────────────────────
-info(`🔍 Searching for virtual environment in: ${projectDir}`);
+info(`[INFO] Searching for virtual environment in: ${projectDir}`);
 
 const venvDirs = ['.venv', 'venv', 'env', '.env', 'virtualenv'];
 let foundVenv  = null;
@@ -77,13 +77,13 @@ for (const d of venvDirs) {
 }
 
 if (!foundVenv) {
-  err(`⚠️  No virtual environment found in standard locations.`);
+  err(`[WARN] No virtual environment found in standard locations.`);
   err(`   Locations searched: ${venvDirs.join(', ')}`);
   err(`   Suggestion: use requirements.txt or pyproject.toml as fallback.`);
   process.exit(2);
 }
 
-info(`✅ Virtual environment found: ${foundVenv}`);
+info(`[OK] Virtual environment found: ${foundVenv}`);
 
 // ── verify pip is executable ──────────────────────────────────────────────────
 try {
@@ -91,7 +91,7 @@ try {
 } catch {
   // On Windows .exe files may not always have X bit — try anyway
   if (!pipCmd.endsWith('.exe')) {
-    err(`❌ pip found but not executable: ${pipCmd}`);
+    err(`[ERR] pip found but not executable: ${pipCmd}`);
     process.exit(1);
   }
 }
@@ -101,18 +101,18 @@ try {
   const realPip  = fs.realpathSync(pipCmd);
   const realVenv = fs.realpathSync(foundVenv);
   if (!realPip.startsWith(realVenv + path.sep)) {
-    err(`❌ Security: pip resolves outside the virtual environment`);
+    err(`[ERR] Security: pip resolves outside the virtual environment`);
     err(`   pip path: ${pipCmd} → ${realPip}`);
     err(`   venv path: ${foundVenv} → ${realVenv}`);
     err(`   This may indicate a symlink attack. Aborting.`);
     process.exit(1);
   }
 } catch (e) {
-  err(`❌ Security: cannot resolve pip path: ${e.message}`);
+  err(`[ERR] Security: cannot resolve pip path: ${e.message}`);
   process.exit(1);
 }
 
-info(`📦 Extracting installed packages with: ${pipCmd}`);
+info(`[INFO] Extracting installed packages with: ${pipCmd}`);
 
 // ── run pip freeze ────────────────────────────────────────────────────────────
 const pipLogFile = path.join(outputDir, 'pip_warnings.log');
@@ -130,10 +130,10 @@ try {
   if (logStat.size === 0) {
     fs.unlinkSync(pipLogFile);
   } else {
-    info(`⚠️  pip produced warnings — see ${pipLogFile}`);
+    info(`[WARN] pip produced warnings — see ${pipLogFile}`);
   }
 } catch (e) {
-  err(`❌ pip freeze failed: ${e.message} (see ${pipLogFile} for details)`);
+  err(`[ERR] pip freeze failed: ${e.message} (see ${pipLogFile} for details)`);
   process.exit(1);
 }
 
@@ -156,8 +156,8 @@ const count = freezeOut
   .filter(line => line.trim() && !line.trim().startsWith('#'))
   .length;
 
-info(`✅ Requirements extracted: ${count} packages`);
-info(`📄 File saved to: ${outputFile}`);
+info(`[OK] Requirements extracted: ${count} packages`);
+info(`[INFO] File saved to: ${outputFile}`);
 info(`--- Contents (first 20 lines) ---`);
 const preview = (header + freezeOut).split('\n').slice(0, 20).join('\n');
 info(preview);

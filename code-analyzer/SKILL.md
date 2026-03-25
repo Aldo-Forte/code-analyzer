@@ -628,7 +628,7 @@ At the end, notify the user of the report directory path and the files produced:
 
 - **Always search online** before asserting that a library, function or pattern is
   correct/deprecated. Do not rely solely on internal knowledge.
-- Always use the user's language (respond in the language the user writes in).
+- Always respond in English, regardless of the user's language. Use plain, clear English.
 - Function names, variables and libraries always in `backtick`.
 - If something is ambiguous or unclear, say so explicitly — do not invent explanations.
 - Update the `updated` field in this `SKILL.md` frontmatter with the current date at the end of each analysis. The format is `"YYYY-MM-DD"` (e.g. `"2026-03-24"`). Edit the `updated: ""` line by replacing the value between the quotes.

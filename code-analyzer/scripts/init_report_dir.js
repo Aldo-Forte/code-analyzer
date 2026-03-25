@@ -28,7 +28,7 @@ const projectDirArg = process.argv[2] || '.';
 // ── validate PROJECT_DIR ──────────────────────────────────────────────────────
 let projectDir = path.resolve(projectDirArg);
 if (!fs.existsSync(projectDir) || !fs.statSync(projectDir).isDirectory()) {
-  process.stderr.write(`❌ Directory not found: ${projectDirArg}\n`);
+  process.stderr.write(`[ERR] Directory not found: ${projectDirArg}\n`);
   process.exit(1);
 }
 // Security: resolve symlinks to canonical path (CWE-22)
@@ -63,7 +63,7 @@ while (!created) {
     if (e.code === 'EEXIST') {
       counter++;
       if (counter >= MAX_ATTEMPTS) {
-        process.stderr.write(`❌ Could not create unique report dir after ${MAX_ATTEMPTS} attempts\n`);
+        process.stderr.write(`[ERR] Could not create unique report dir after ${MAX_ATTEMPTS} attempts\n`);
         process.exit(1);
       }
       reportDir = path.join(baseDir, `${ts}-Report-${counter}`);
@@ -73,7 +73,7 @@ while (!created) {
   }
 }
 
-process.stderr.write(`📁 Report directory created: ${reportDir}\n`);
+process.stderr.write(`[INFO] Report directory created: ${reportDir}\n`);
 
 // print only the absolute path on stdout
 process.stdout.write(reportDir + '\n');

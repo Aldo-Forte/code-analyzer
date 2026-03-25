@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# install.sh — Installa code-analyzer su tutti i principali agenti AI rilevati
+# install.sh — Install code-analyzer on all detected AI agents
 #
-# Uso:
+# Usage:
 #   bash install.sh              # install on all detected agents
 #   bash install.sh --agent claude-code  # install on Claude Code only
 #   bash install.sh --list       # show detected installation paths
@@ -16,7 +16,7 @@ SKILL_NAME="code-analyzer"
 REPO_URL="https://github.com/Aldo-Forte/code-analyzer"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# ── Colori ──────────────────────────────────────────────────────────────────
+# ── Colors ──────────────────────────────────────────────────────────────────
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
@@ -28,7 +28,7 @@ warn() { echo -e "${YELLOW}[--]${RESET} $*"; }
 err()  { echo -e "${RED}[ERR]${RESET} $*" >&2; }
 hdr()  { echo -e "\n${BOLD}$*${RESET}"; }
 
-# ── Mappa agenti → path di installazione ────────────────────────────────────
+# ── Agent → installation path map ────────────────────────────────────────────
 declare -A AGENT_PATHS=(
   ["claude-code"]="$HOME/.claude/skills"
   ["codex"]="$HOME/.codex/skills"
@@ -40,7 +40,7 @@ declare -A AGENT_PATHS=(
   ["agents"]="$HOME/.agents/skills"
 )
 
-# ── Funzioni principali ──────────────────────────────────────────────────────
+# ── Core functions ───────────────────────────────────────────────────────────
 
 detect_agents() {
   # Returns agents whose base paths already exist (agent installed)
@@ -92,7 +92,7 @@ install_to() {
   # Make scripts executable
   # chmod not needed for Node.js scripts
 
-  ok "${agent}: installato in $dest"
+  ok "${agent}: installed in $dest"
 }
 
 install_from_github() {
@@ -101,7 +101,7 @@ install_from_github() {
   tmp="$(mktemp -d)"
   trap 'rm -rf "$tmp"' EXIT
 
-  hdr "Download da GitHub..."
+  hdr "Downloading from GitHub..."
   if command -v git &>/dev/null; then
     git clone --depth=1 --quiet "$REPO_URL" "$tmp/$SKILL_NAME"
   else
@@ -169,7 +169,7 @@ uninstall_all() {
     local dest="${AGENT_PATHS[$agent]}/$SKILL_NAME"
     if [ -d "$dest" ]; then
       rm -rf "$dest"
-      ok "Rimossa da $agent ($dest)"
+      ok "Removed from $agent ($dest)"
       removed=$((removed + 1))
     fi
   done
@@ -196,7 +196,7 @@ while [[ $# -gt 0 ]]; do
     --uninstall)  MODE="uninstall"; shift ;;
     --force|-f)   FORCE=true; shift ;;
     --help|-h)
-      echo "Uso: bash install.sh [--agent NOME] [--list] [--uninstall] [--force]"
+      echo "Usage: bash install.sh [--agent NAME] [--list] [--uninstall] [--force]"
       echo ""
       echo "  --force, -f   Overwrite existing installation without backup prompt"
       echo ""
@@ -215,8 +215,8 @@ case "$MODE" in
     exit 0 ;;
 esac
 
-# ── Installazione ────────────────────────────────────────────────────────────
-hdr "Installazione $SKILL_NAME v$(grep '^version:' "$SCRIPT_DIR/SKILL.md" | awk '{print $2}')"
+# ── Installation ─────────────────────────────────────────────────────────────
+hdr "Installing $SKILL_NAME v$(grep '^version:' "$SCRIPT_DIR/SKILL.md" | awk '{print $2}')"
 
 if [ -n "$TARGET_AGENT" ]; then
   # Specific agent
@@ -231,8 +231,8 @@ else
   mapfile -t detected < <(detect_agents)
 
   if [ ${#detected[@]} -eq 0 ]; then
-    warn "Nessun agente rilevato automaticamente."
-    warn "Usa --agent NOME per specificare un agente manualmente."
+    warn "No agents detected automatically."
+    warn "Use --agent NAME to specify one manually."
     warn "Available agents: $(printf '%s\n' "${!AGENT_PATHS[@]}" | sort | tr '\n' ' ')"
     exit 0
   fi
@@ -243,5 +243,5 @@ else
   done
 fi
 
-hdr "Completato."
+hdr "Done."
 echo "Restart the agent and type /skills to verify."

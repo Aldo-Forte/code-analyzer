@@ -55,7 +55,7 @@ PROJECT_DIR="${1:-.}"
 REPORT_DIR="${2:-}"
 
 if [ ! -d "$PROJECT_DIR" ]; then
-  echo "❌ Directory not found: $PROJECT_DIR" >&2
+  echo "[ERR] Directory not found: $PROJECT_DIR" >&2
   exit 1
 fi
 
@@ -76,7 +76,7 @@ OUTPUT_FILE="$OUTPUT_DIR/requirements_python.txt"
 
 mkdir -p -m 0700 "$OUTPUT_DIR"
 
-echo "🔍 Searching for virtual environment in: $PROJECT_DIR" >&2
+echo "[INFO] Searching for virtual environment in: $PROJECT_DIR" >&2
 
 VENV_DIRS=(".venv" "venv" "env" ".env" "virtualenv")
 FOUND_VENV=""
@@ -85,13 +85,13 @@ for d in "${VENV_DIRS[@]}"; do
   CANDIDATE="$PROJECT_DIR/$d"
   if [ -f "$CANDIDATE/bin/pip" ] || [ -f "$CANDIDATE/Scripts/pip.exe" ] || [ -f "$CANDIDATE/Scripts/pip" ]; then
     FOUND_VENV="$CANDIDATE"
-    echo "✅ Virtual environment found: $FOUND_VENV" >&2
+    echo "[OK] Virtual environment found: $FOUND_VENV" >&2
     break
   fi
 done
 
 if [ -z "$FOUND_VENV" ]; then
-  echo "⚠️  No virtual environment found in standard locations." >&2
+  echo "[WARN] No virtual environment found in standard locations." >&2
   echo "   Searched: ${VENV_DIRS[*]}" >&2
   echo "   Suggestion: use requirements.txt or pyproject.toml as fallback." >&2
   exit 2
@@ -107,7 +107,7 @@ fi
 
 # Verify pip is actually executable (avoids silent failures with set -e)
 if [ ! -x "$PIP_CMD" ]; then
-  echo "❌ pip found but not executable: $PIP_CMD" >&2
+  echo "[ERR] pip found but not executable: $PIP_CMD" >&2
   exit 1
 fi
 
@@ -118,7 +118,7 @@ case "$REAL_PIP" in
   "$REAL_VENV"/*)
     ;; # OK — pip is inside the venv
   *)
-    echo "❌ Security: pip resolves outside the virtual environment" >&2
+    echo "[ERR] Security: pip resolves outside the virtual environment" >&2
     echo "   pip path: $PIP_CMD → $REAL_PIP" >&2
     echo "   venv path: $FOUND_VENV → $REAL_VENV" >&2
     echo "   This may indicate a symlink attack. Aborting." >&2
@@ -126,18 +126,18 @@ case "$REAL_PIP" in
     ;;
 esac
 
-echo "📦 Extracting installed packages with: $PIP_CMD" >&2
+echo "[INFO] Extracting installed packages with: $PIP_CMD" >&2
 
 # pip freeze: stderr redirected to log file for later inspection
 PIP_LOG="$OUTPUT_DIR/pip_warnings.log"
 install -m 0600 /dev/null "$PIP_LOG"  # create log file with restricted permissions
 FREEZE_OUT=$("$PIP_CMD" freeze 2>"$PIP_LOG") || {
-  echo "❌ pip freeze failed (see $PIP_LOG for details)" >&2
+  echo "[ERR] pip freeze failed (see $PIP_LOG for details)" >&2
   exit 1
 }
 # Remove empty log file if no warnings were produced
 [ -s "$PIP_LOG" ] || rm -f "$PIP_LOG"
-[ -f "$PIP_LOG" ] && echo "⚠️  pip produced warnings — see $PIP_LOG" >&2
+[ -f "$PIP_LOG" ] && echo "[WARN] pip produced warnings — see $PIP_LOG" >&2
 {
   echo "# Requirements extracted from virtual environment"
   echo "# Project: $(basename "$PROJECT_DIR")"
@@ -151,7 +151,7 @@ chmod 0600 "$OUTPUT_FILE"
 # Count non-comment, non-empty lines
 COUNT=$(grep -cE '^[^#[:space:]]' "$OUTPUT_FILE" 2>/dev/null || echo 0)
 
-echo "✅ Requirements extracted: $COUNT packages" >&2
-echo "📄 File saved to: $OUTPUT_FILE" >&2
+echo "[OK] Requirements extracted: $COUNT packages" >&2
+echo "[INFO] File saved to: $OUTPUT_FILE" >&2
 echo "--- Contents (first 20 lines) ---" >&2
 head -20 "$OUTPUT_FILE" >&2

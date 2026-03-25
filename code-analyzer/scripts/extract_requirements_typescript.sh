@@ -49,7 +49,7 @@ PROJECT_DIR="${1:-.}"
 REPORT_DIR="${2:-}"
 
 if [ ! -d "$PROJECT_DIR" ]; then
-  echo "❌ Directory not found: $PROJECT_DIR" >&2
+  echo "[ERR] Directory not found: $PROJECT_DIR" >&2
   exit 1
 fi
 
@@ -68,12 +68,12 @@ else
 fi
 OUTPUT_FILE="$OUTPUT_DIR/requirements_typescript.txt"
 
-echo "🔍 Searching for TypeScript/Node project in: $PROJECT_DIR" >&2
+echo "[INFO] Searching for TypeScript/Node project in: $PROJECT_DIR" >&2
 
 # --- Check package.json (before creating output directory) ---
 PACKAGE_JSON="$PROJECT_DIR/package.json"
 if [ ! -f "$PACKAGE_JSON" ]; then
-  echo "❌ package.json not found in $PROJECT_DIR" >&2
+  echo "[ERR] package.json not found in $PROJECT_DIR" >&2
   echo "   Make sure you are pointing to the root of the Node/TypeScript project." >&2
   exit 1
 fi
@@ -84,16 +84,16 @@ MAX_FILE_SIZE=$((10 * 1024 * 1024))  # 10 MB
 mkdir -p -m 0700 "$OUTPUT_DIR"
 PKG_MGR_LOG="$OUTPUT_DIR/npm_warnings.log"
 install -m 0600 /dev/null "$PKG_MGR_LOG"  # initialize log file with restricted permissions
-echo "✅ package.json found" >&2
+echo "[OK] package.json found" >&2
 
 # --- Check node_modules ---
 NODE_MODULES="$PROJECT_DIR/node_modules"
 HAS_NODE_MODULES=false
 if [ -d "$NODE_MODULES" ]; then
   HAS_NODE_MODULES=true
-  echo "✅ node_modules found" >&2
+  echo "[OK] node_modules found" >&2
 else
-  echo "⚠️  node_modules not found — dependencies may not be installed" >&2
+  echo "[WARN] node_modules not found — dependencies may not be installed" >&2
 fi
 
 # --- Output header ---
@@ -113,7 +113,7 @@ chmod 0600 "$OUTPUT_FILE"
 
 PKG_SIZE=$(wc -c < "$PACKAGE_JSON" 2>/dev/null || echo 0)
 if [ "$PKG_SIZE" -gt "$MAX_FILE_SIZE" ]; then
-  echo "❌ package.json is too large (${PKG_SIZE} bytes, max ${MAX_FILE_SIZE})" >&2
+  echo "[ERR] package.json is too large (${PKG_SIZE} bytes, max ${MAX_FILE_SIZE})" >&2
   exit 1
 fi
 
@@ -144,11 +144,11 @@ if command -v node &>/dev/null; then
       process.stdout.write('\n');
     }
   " >> "$OUTPUT_FILE" || {
-    echo "⚠️  node could not read package.json — including raw file" >> "$OUTPUT_FILE"
+    echo "[WARN] node could not read package.json — including raw file" >> "$OUTPUT_FILE"
     cat "$PACKAGE_JSON" >> "$OUTPUT_FILE"
   }
 else
-  echo "⚠️  node not available — including raw package.json" >> "$OUTPUT_FILE"
+  echo "[WARN] node not available — including raw package.json" >> "$OUTPUT_FILE"
   cat "$PACKAGE_JSON" >> "$OUTPUT_FILE"
 fi
 
@@ -221,8 +221,8 @@ fi
 
 # Remove empty log file if no warnings were produced
 [ -s "$PKG_MGR_LOG" ] || rm -f "$PKG_MGR_LOG"
-[ -f "$PKG_MGR_LOG" ] && echo "⚠️  Package manager produced warnings — see $PKG_MGR_LOG" >&2
+[ -f "$PKG_MGR_LOG" ] && echo "[WARN] Package manager produced warnings — see $PKG_MGR_LOG" >&2
 
 echo "" >&2
-echo "✅ Analysis complete: $COUNT_DEPS declared dependencies" >&2
-echo "📄 File saved to: $OUTPUT_FILE" >&2
+echo "[OK] Analysis complete: $COUNT_DEPS declared dependencies" >&2
+echo "[INFO] File saved to: $OUTPUT_FILE" >&2

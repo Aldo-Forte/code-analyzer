@@ -55,7 +55,7 @@ portable_realpath() {
 PROJECT_DIR="${1:-.}"
 
 if [ ! -d "$PROJECT_DIR" ]; then
-  echo "❌ Directory not found: $PROJECT_DIR" >&2
+  echo "[ERR] Directory not found: $PROJECT_DIR" >&2
   exit 1
 fi
 
@@ -65,7 +65,7 @@ PROJECT_DIR=$(cd "$PROJECT_DIR" && pwd)
 # Security: reject paths that resolved via symlink to unexpected locations (CWE-22)
 REAL_PROJECT_DIR=$(portable_realpath "$PROJECT_DIR")
 if [ "$REAL_PROJECT_DIR" != "$PROJECT_DIR" ]; then
-  echo "⚠️  Note: project path resolved through symlink: $PROJECT_DIR → $REAL_PROJECT_DIR" >&2
+  echo "[WARN] Note: project path resolved through symlink: $PROJECT_DIR → $REAL_PROJECT_DIR" >&2
   PROJECT_DIR="$REAL_PROJECT_DIR"
 fi
 BASE_DIR="$PROJECT_DIR/code-analyzer"
@@ -85,13 +85,13 @@ while true; do
   # Directory already exists — try next counter
   COUNTER=$((COUNTER + 1))
   if [ "$COUNTER" -ge "$MAX_ATTEMPTS" ]; then
-    echo "❌ Could not create unique report dir after $MAX_ATTEMPTS attempts" >&2
+    echo "[ERR] Could not create unique report dir after $MAX_ATTEMPTS attempts" >&2
     exit 1
   fi
   REPORT_DIR="$BASE_DIR/${TIMESTAMP}-Report-${COUNTER}"
 done
 
-echo "📁 Report dir created: $REPORT_DIR" >&2
+echo "[INFO] Report dir created: $REPORT_DIR" >&2
 
 # Print only the absolute path to stdout (used by the caller)
 echo "$REPORT_DIR"
