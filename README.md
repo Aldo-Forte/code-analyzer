@@ -62,12 +62,6 @@ cd code-analyzer
 bash install.sh
 ```
 
-Or in a single command, without cloning first:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Aldo-Forte/code-analyzer/main/install.sh | bash
-```
-
 Options:
 
 ```bash
